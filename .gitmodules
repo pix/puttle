@@ -1,0 +1,3 @@
+[submodule "shave"]
+	path = shave
+	url = git://git.lespiau.name/shave
