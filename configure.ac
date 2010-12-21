@@ -5,6 +5,7 @@ AC_PROG_LIBTOOL
 
 AC_CHECK_LIB([boost_system], [main], [LIBS="$LIBS -lboost_system"], [AC_MSG_ERROR([Not Found: boost_system])])
 AC_CHECK_LIB([boost_thread], [main], [LIBS="$LIBS -lboost_thread"], [AC_MSG_ERROR([Not Found: boost_thread])])
+AC_CHECK_LIB([boost_program_options], [main], [LIBS="$LIBS -lboost_program_options"], [AC_MSG_ERROR([Not Found: boost_program_options])])
 
 AC_SUBST([LIBS])
 
