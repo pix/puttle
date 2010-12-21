@@ -23,6 +23,8 @@
 
 #include <string>
 
+namespace puttle {
+
 PuttleServer::PuttleServer(const ios_deque& io_services, int port)
     : io_services_(io_services),
       acceptor_(*io_services.front(), boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {
@@ -54,4 +56,6 @@ void PuttleServer::handle_accept(PuttleProxy::pointer new_proxy, const boost::sy
         new_proxy->forward_to(proxy_host_, proxy_port_);
         start_accept();
     }
+}
+
 }

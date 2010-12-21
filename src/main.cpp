@@ -33,6 +33,8 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+using namespace puttle;
+
 int main(int argc, char** argv) {
     try {
 

@@ -27,6 +27,8 @@
 #include <string>
 #include <deque>
 
+namespace puttle {
+
 using boost::asio::ip::tcp;
 
 typedef boost::shared_ptr<boost::asio::io_service> io_service_ptr;
@@ -47,6 +49,8 @@ private:
     ios_deque io_services_;
     tcp::acceptor acceptor_;
 };
+
+}
 
 #endif /* end of include guard: PUTTLE_SRC_PUTTLE_SERVER_H */
 

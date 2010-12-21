@@ -25,6 +25,8 @@
 
 #include <string>
 
+namespace puttle {
+
 using boost::asio::ip::tcp;
 
 class PuttleProxy;
@@ -78,5 +80,6 @@ private:
     std::string server_headers_;
 };
 
+}
 
 #endif /* end of include guard: PUTTLE_SRC_PUTTLE_PROXY_H */

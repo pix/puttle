@@ -25,6 +25,8 @@
 #include <string>
 #include <boost/format.hpp>
 
+namespace puttle {
+
 typedef boost::asio::detail::socket_option::integer<IPPROTO_IP, IP_TTL> time_to_live;
 
 PuttleProxy::PuttleProxy(boost::asio::io_service& io_service )
@@ -207,4 +209,6 @@ void PuttleProxy::handle_server_write(const boost::system::error_code& error) {
 void PuttleProxy::shutdown() {
     client_socket_.close();
     server_socket_.close();
+}
+
 }
