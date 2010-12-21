@@ -19,6 +19,7 @@
  *
  */
 #include <puttle_server.h>
+#include <config.h>
 
 #include <iostream>
 #include <string>
@@ -76,6 +77,9 @@ int main(int argc, char** argv) {
             }
 
         }
+
+        std::cout << PACKAGE_NAME << " v" << PACKAGE_VERSION;
+        std::cout << ". Listening on port: " << port << ", forwarding to: " << proxy_host << ":" << proxy_port << std::endl;
 
         ios_deque io_services;
         std::deque<boost::asio::io_service::work> io_service_work;
