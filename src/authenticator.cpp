@@ -64,6 +64,10 @@ Authenticator::pointer Authenticator::create(Authenticator::Method m, const std:
     }
 }
 
+void Authenticator::set_headers(const headers_map& headers) {
+    headers_ = headers;
+}
+
 NoneAuthenticator::NoneAuthenticator() : Authenticator(std::string(), std::string()) {
 }
 

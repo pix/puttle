@@ -37,6 +37,8 @@ public:
         AUTH_INVALID,
     } Method;
 
+    typedef std::map<std::string, std::string> headers_map;
+
     typedef boost::shared_ptr<Authenticator> pointer;
     static pointer create(Authenticator::Method m, const std::string& user, const std::string& pass);
     static Method get_method(const std::string& method);
@@ -46,10 +48,12 @@ public:
 
     virtual bool has_token() = 0;
     virtual std::string get_token() = 0;
+    void set_headers(const headers_map& headers);
 
 protected:
     std::string user_;
     std::string pass_;
+    headers_map headers_;
 
 private:
     static std::map<std::string, Method> method_names;
