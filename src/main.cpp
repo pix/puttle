@@ -67,9 +67,7 @@ int main(int argc, char** argv) {
             ("user", po::value<std::string>(&proxy_user),
              "Proxy username")
             ("password", po::value<std::string>(&proxy_pass),
-             "Proxy password")
-            ("method", "Use 'method' for authentication");
-
+             "Proxy password");
 
             po::options_description all_opt;
             all_opt.add(config_options);
