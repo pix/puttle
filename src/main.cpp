@@ -34,48 +34,61 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
-using namespace puttle;
+using ::puttle::PuttleServer;
+using ::puttle::ios_deque;
+using ::puttle::io_service_ptr;
+
+namespace po = ::boost::program_options;
 
 int main(int argc, char** argv) {
     try {
-
         int thread_num = 2;
         int port = 8888;
         std::string proxy_host = "localhost";
         std::string proxy_port = "3128";
 
+        std::string proxy_user;
+        std::string proxy_pass;
+
         {
-            using namespace boost::program_options;
-
-            options_description config_options("Configuration");
+            po::options_description config_options("Configuration");
             config_options.add_options()
-                ("num-threads,n", value<int>(&thread_num),
-                 "Number of threads")
-                ("listen-port,l", value<int>(&port),
-                 "Port to listen to")
-                ("proxy-port,P", value<std::string>(&proxy_port),
-                 "Destination proxy port")
-                ("proxy-host,H", value<std::string>(&proxy_host),
-                 "Destination proxy host");
+            ("num-threads,n", po::value<int>(&thread_num),
+             "Number of threads")
+            ("listen-port,l", po::value<int>(&port),
+             "Port to listen to")
+            ("proxy-port,P", po::value<std::string>(&proxy_port),
+             "Destination proxy port")
+            ("proxy-host,H", po::value<std::string>(&proxy_host),
+             "Destination proxy host");
 
-            options_description all_opt;
+            po::options_description auth_options("Authentication");
+            auth_options.add_options()
+            ("user", po::value<std::string>(&proxy_user),
+             "Proxy username")
+            ("password", po::value<std::string>(&proxy_pass),
+             "Proxy password")
+            ("method", "Use 'method' for authentication");
+
+
+            po::options_description all_opt;
             all_opt.add(config_options);
+            all_opt.add(auth_options);
 
             all_opt.add_options()
-                ("help,h", "print this message");
+            ("help,h", "print this message");
 
-            variables_map vm;
-            store(command_line_parser(argc, argv)
-                    .options(all_opt)
-                    .run(),
-                    vm);
-            notify(vm);
+            po::variables_map vm;
+            po::store(po::command_line_parser(argc, argv)
+                  .options(all_opt)
+                  .run(),
+                  vm);
+            po::notify(vm);
 
             if (vm.count("help")) {
                 std::cout << all_opt << std::endl;
                 return 1;
             }
-
         }
 
         std::cout << PACKAGE_NAME << " v" << PACKAGE_VERSION;
