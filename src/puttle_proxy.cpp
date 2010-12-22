@@ -19,17 +19,19 @@
  *
  */
 #include <puttle_proxy.h>
-
 #include <linux/netfilter_ipv4.h>
 
+#include <map>
 #include <string>
 #include <boost/format.hpp>
+#include <boost/lexical_cast.hpp>
+#include <boost/algorithm/string.hpp>
 
 namespace puttle {
 
 typedef boost::asio::detail::socket_option::integer<IPPROTO_IP, IP_TTL> time_to_live;
 
-PuttleProxy::PuttleProxy(boost::asio::io_service& io_service )
+PuttleProxy::PuttleProxy(boost::asio::io_service& io_service )  // NOLINT
     : client_socket_(io_service),
       server_socket_(io_service),
       resolver_(io_service) {
@@ -50,8 +52,23 @@ void PuttleProxy::start_forwarding() {
     handle_client_write(ec);
 }
 
+void PuttleProxy::set_proxy_user(const std::string& user) {
+    proxy_user_ = user;
+}
+
+void PuttleProxy::set_proxy_pass(const std::string& pass) {
+    proxy_pass_ = pass;
+}
+
+
 void PuttleProxy::forward_to(std::string host, std::string port) {
-    tcp::resolver::query query(host, port);
+    host_ = host;
+    port_ = port;
+    resolve_destination();
+}
+
+void PuttleProxy::resolve_destination() {
+    tcp::resolver::query query(host_, port_);
     resolver_.async_resolve(query,
                             boost::bind(&PuttleProxy::handle_resolve, shared_from_this(),
                                         boost::asio::placeholders::error,
@@ -101,8 +118,13 @@ void PuttleProxy::setup_proxy() {
     _ip = ntohl(client.sin_addr.s_addr);
     _port = ntohs(client.sin_port);
 
-    boost::format fmt = boost::format("CONNECT %1%:%2% HTTP/1.1\r\nHost: %1%:%2%\r\n\r\n") % (boost::asio::ip::address_v4(_ip)) % _port;
+    boost::format fmt = boost::format("CONNECT %1%:%2% HTTP/1.1\r\nHost: %1%:%2%\r\n") % (boost::asio::ip::address_v4(_ip)) % _port;
     std::string connect_string = fmt.str();
+
+    if (authenticator_ != NULL && authenticator_->has_token())
+        connect_string += authenticator_->get_token();
+
+    connect_string += "\r\n";
 
     boost::asio::async_write(server_socket_,
                              boost::asio::buffer(connect_string),
@@ -139,12 +161,70 @@ void PuttleProxy::handle_proxy_response(const boost::system::error_code& error,
                             boost::asio::placeholders::error,
                             boost::asio::placeholders::bytes_transferred));
         } else {
-            start_forwarding();
+            check_proxy_response();
         }
-
-
     } else {
         shutdown();
+    }
+}
+
+void PuttleProxy::check_proxy_response() {
+    size_t pos = server_headers_.find("HTTP/");
+
+    // HTTP/ Should be the first header line
+    if ( pos != 0 )
+        shutdown_error();
+
+    size_t first_space = server_headers_.find_first_of(" ", pos);
+    std::string status = server_headers_.substr(first_space + 1, 3);
+
+    std::string headers(server_headers_);
+    std::string::size_type index;
+    std::string line;
+    while ((index = headers.find("\r\n")) != std::string::npos) {
+        line = headers.substr(0, index);
+        headers.erase(0, index+2);
+        if (line == "")
+            break;
+        index = line.find(": ");
+        if (index == std::string::npos) {
+            continue;  // Probably the status line
+        }
+        headers_.insert(std::make_pair(line.substr(0, index), line.substr(index+2)));
+    }
+
+    int http_status = boost::lexical_cast<int>(status);
+    switch (http_status) {
+    case 200:
+        start_forwarding();
+        break;
+    case 407:
+        handle_proxy_auth();
+        break;
+    default:
+        shutdown();
+        break;
+    }
+}
+
+void PuttleProxy::handle_proxy_auth() {
+    if (headers_.find("Proxy-Authenticate") != headers_.end()) {
+        if ( authenticator_ == NULL ) {
+            std::string method = headers_["Proxy-Authenticate"];
+            method = method.substr(0, method.find_first_of(" "));
+
+            Authenticator::Method m = Authenticator::get_method(method);
+            authenticator_ = Authenticator::create(m, proxy_user_, proxy_pass_);
+        }
+
+        server_headers_.clear();
+        headers_.clear();
+        server_socket_.close();
+
+        resolve_destination();
+    } else {
+        /* FIXME: Can we get here ? */
+        shutdown_error();
     }
 }
 
@@ -206,9 +286,13 @@ void PuttleProxy::handle_server_write(const boost::system::error_code& error) {
     }
 }
 
+void PuttleProxy::shutdown_error() {
+    /* TODO: Provide an error message */
+    shutdown();
+}
+
 void PuttleProxy::shutdown() {
     client_socket_.close();
     server_socket_.close();
 }
-
 }

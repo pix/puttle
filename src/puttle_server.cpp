@@ -20,6 +20,7 @@
  */
 #include <puttle_server.h>
 #include <puttle_proxy.h>
+#include <authenticator.h>
 
 #include <string>
 
@@ -33,12 +34,20 @@ PuttleServer::PuttleServer(const ios_deque& io_services, int port)
     start_accept();
 }
 
-void PuttleServer::set_proxy_port(std::string port) {
+void PuttleServer::set_proxy_port(const std::string& port) {
     proxy_port_ = port;
 }
 
-void PuttleServer::set_proxy_host(std::string host) {
+void PuttleServer::set_proxy_host(const std::string& host) {
     proxy_host_ = host;
+}
+
+void PuttleServer::set_proxy_user(const std::string& user) {
+    proxy_user_ = user;
+}
+
+void PuttleServer::set_proxy_pass(const std::string& pass) {
+    proxy_pass_ = pass;
 }
 
 void PuttleServer::start_accept() {
@@ -53,9 +62,10 @@ void PuttleServer::start_accept() {
 
 void PuttleServer::handle_accept(PuttleProxy::pointer new_proxy, const boost::system::error_code& error) {
     if (!error) {
+        new_proxy->set_proxy_user(proxy_user_);
+        new_proxy->set_proxy_pass(proxy_pass_);
         new_proxy->forward_to(proxy_host_, proxy_port_);
         start_accept();
     }
 }
-
 }

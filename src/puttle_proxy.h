@@ -22,7 +22,9 @@
 #define PUTTLE_SRC_PUTTLE_PROXY_H
 
 #include <puttle-common.h>
+#include <authenticator.h>
 
+#include <map>
 #include <string>
 
 namespace puttle {
@@ -39,18 +41,22 @@ public:
 
     typedef boost::shared_ptr<PuttleProxy> pointer;
 
-    static pointer create(boost::asio::io_service& io_service) {
+    static pointer create(boost::asio::io_service& io_service) {  // NOLINT
         return pointer(new PuttleProxy(io_service));
     }
 
-    explicit PuttleProxy(boost::asio::io_service& io_service);
+    explicit PuttleProxy(boost::asio::io_service& io_service);  // NOLINT
     ~PuttleProxy();
 
     tcp::socket& socket();
     void start_forwarding();
     void forward_to(std::string host, std::string port);
+    void set_proxy_user(const std::string& user);
+    void set_proxy_pass(const std::string& pass);
 
 private:
+
+    void resolve_destination();
     void setup_proxy();
 
     void handle_proxy_connect(const boost::system::error_code& error);
@@ -70,16 +76,25 @@ private:
     void handle_client_write(const boost::system::error_code& error);
     void handle_server_write(const boost::system::error_code& error);
 
+    void check_proxy_response();
+    void handle_proxy_auth();
+
     void shutdown();
+    void shutdown_error();
     tcp::socket client_socket_;
     tcp::socket server_socket_;
     tcp::resolver resolver_;
+    Authenticator::pointer authenticator_;
 
     boost::array<char, BUFFER_SIZE> client_data_;
     boost::array<char, BUFFER_SIZE> server_data_;
+    std::string host_;
+    std::string port_;
+    std::string proxy_user_;
+    std::string proxy_pass_;
     std::string server_headers_;
+    std::map<std::string, std::string> headers_;
 };
-
 }
 
 #endif /* end of include guard: PUTTLE_SRC_PUTTLE_PROXY_H */

@@ -21,7 +21,7 @@
 #include <puttle_server.h>
 #include <config.h>
 
-#include <iostream>
+#include <iostream>  // NOLINT
 #include <string>
 #include <deque>
 
@@ -108,6 +108,8 @@ int main(int argc, char** argv) {
         PuttleServer puttle_server(io_services, port);
         puttle_server.set_proxy_host(proxy_host);
         puttle_server.set_proxy_port(proxy_port);
+        puttle_server.set_proxy_user(proxy_user);
+        puttle_server.set_proxy_pass(proxy_pass);
 
         thr_grp.join_all();
     } catch(const std::exception& e) {

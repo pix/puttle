@@ -31,7 +31,6 @@ namespace puttle {
 
 typedef boost::shared_ptr<boost::asio::io_service> io_service_ptr;
 typedef std::deque<io_service_ptr> ios_deque;
-
 }
 
 #endif /* end of include guard: PUTTLE_SRC_PUTTLE_COMMON_H */

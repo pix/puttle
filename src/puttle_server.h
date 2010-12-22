@@ -23,33 +23,38 @@
 
 #include <puttle-common.h>
 #include <puttle_proxy.h>
+#include <authenticator.h>
 
 #include <string>
 #include <deque>
 
 namespace puttle {
 
-using boost::asio::ip::tcp;
+using ::boost::asio::ip::tcp;
 
 typedef boost::shared_ptr<boost::asio::io_service> io_service_ptr;
 typedef std::deque<io_service_ptr> ios_deque;
 
 class PuttleServer {
 public:
+
     PuttleServer(const ios_deque& io_services, int port);
 
     void start_accept();
-    void set_proxy_port(std::string port);
-    void set_proxy_host(std::string host);
+    void set_proxy_port(const std::string& port);
+    void set_proxy_host(const std::string& host);
+    void set_proxy_user(const std::string& user);
+    void set_proxy_pass(const std::string& pass);
 
 private:
     void handle_accept(PuttleProxy::pointer new_proxy, const boost::system::error_code& error);
     std::string proxy_port_;
     std::string proxy_host_;
+    std::string proxy_user_;
+    std::string proxy_pass_;
     ios_deque io_services_;
     tcp::acceptor acceptor_;
 };
-
 }
 
 #endif /* end of include guard: PUTTLE_SRC_PUTTLE_SERVER_H */
