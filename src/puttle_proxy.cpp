@@ -193,7 +193,13 @@ void PuttleProxy::check_proxy_response() {
         headers_.insert(std::make_pair(line.substr(0, index), line.substr(index+2)));
     }
 
-    int http_status = boost::lexical_cast<int>(status);
+    int http_status = 0;
+    try {
+        http_status = boost::lexical_cast<int>(status);
+    } catch(const boost::bad_lexical_cast& e) {
+        // We failed to parse the proxy answer
+        shutdown_error();
+    }
     switch (http_status) {
     case 200:
         start_forwarding();
