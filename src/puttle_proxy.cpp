@@ -118,11 +118,21 @@ void PuttleProxy::setup_proxy() {
     _ip = ntohl(client.sin_addr.s_addr);
     _port = ntohs(client.sin_port);
 
-    boost::format fmt = boost::format("CONNECT %1%:%2% HTTP/1.1\r\nHost: %1%:%2%\r\n") % (boost::asio::ip::address_v4(_ip)) % _port;
+    dest_host_ = (boost::format("%s") %boost::asio::ip::address_v4(_ip)).str();
+    dest_port_ = boost::lexical_cast<std::string>(_port);
+
+    boost::format fmt = boost::format("CONNECT %1%:%2% HTTP/1.1\r\n" \
+                                      "User-Agent: Mozilla/5.0 (X11; U; AmigaOS x86_64; eo-EO; rv:42.6.6)r\n" \
+                                      "Proxy-Connection: keep-alive\r\n" \
+                                      "Host: %1%:%2%\r\n") % dest_host_ % dest_port_;
     std::string connect_string = fmt.str();
 
-    if (authenticator_ != NULL && authenticator_->has_token())
-        connect_string += authenticator_->get_token();
+    if (authenticator_ != NULL) {
+        if (authenticator_->has_error())
+            shutdown_error();
+        else if (authenticator_->has_token())
+            connect_string += authenticator_->get_token();
+    }
 
     connect_string += "\r\n";
 
@@ -220,7 +230,11 @@ void PuttleProxy::handle_proxy_auth() {
             method = method.substr(0, method.find_first_of(" "));
 
             Authenticator::Method m = Authenticator::get_method(method);
-            authenticator_ = Authenticator::create(m, proxy_user_, proxy_pass_);
+            authenticator_ = Authenticator::create(m, proxy_user_, proxy_pass_, dest_host_, dest_port_);
+        }
+
+        if (authenticator_ != NULL) {
+            authenticator_->set_headers(headers_);
         }
 
         server_headers_.clear();

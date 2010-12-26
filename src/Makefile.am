@@ -5,3 +5,7 @@ bin_PROGRAMS = puttle
 puttle_SOURCES = puttle_server.cpp puttle_proxy.cpp authenticator.cpp main.cpp
 puttle_LDADD = @LIBS@
 
+if HAVE_DEBUG
+check-local:
+	$(MAKE) -C $(top_srcdir)/tests check
+endif

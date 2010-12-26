@@ -8,6 +8,10 @@ AC_CHECK_LIB([boost_system], [main], [LIBS="$LIBS -lboost_system"], [AC_MSG_ERRO
 AC_CHECK_LIB([boost_thread], [main], [LIBS="$LIBS -lboost_thread"], [AC_MSG_ERROR([Not Found: boost_thread])])
 AC_CHECK_LIB([boost_program_options], [main], [LIBS="$LIBS -lboost_program_options"], [AC_MSG_ERROR([Not Found: boost_program_options])])
 
+PKG_CHECK_MODULES(OPENSSL, openssl >= 0.9.6)
+AC_SUBST(OPENSSL_CFLAGS)
+AC_SUBST(OPENSSL_LIBS)
+
 dnl enable debug
 AC_MSG_CHECKING([whether to build with debug information])
 AC_ARG_ENABLE(debug,
@@ -19,21 +23,26 @@ AC_ARG_ENABLE(debug,
 			  [enable_debug="no"]
 )
 AC_MSG_RESULT([$debugit])
+
+AM_CONDITIONAL(HAVE_DEBUG, test "$enable_debug" = yes)
 if test "$enable_debug" = yes; then
 	AM_CFLAGS="-g -Wall -Werror -Wno-uninitialized -O0"
 	AM_CXXFLAGS="-g -Wall -Werror -Wno-uninitialized -O0"
-	AC_DEFINE(DEBUG, 1, [Define to 1 if you want debug.])
+	AC_DEFINE(HAVE_DEBUG, 1, [Define to 1 if you want debug.])
 fi
+
+AM_CXXFLAGS="$AM_CXXFLAGS $OPENSSL_CFLAGS -std=gnu++0x"
+LIBS="$LIBS $OPENSSL_LIBS"
+
 AC_SUBST(AM_CFLAGS)
 AC_SUBST(AM_CXXFLAGS)
-
-
 AC_SUBST([LIBS])
 
 SHAVE_INIT([shave/shave], [enable])
 AC_CONFIG_FILES(
 				Makefile
 				src/Makefile
+				tests/Makefile
 				shave/shave/shave
 				shave/shave/shave-libtool)
 

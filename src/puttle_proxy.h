@@ -90,6 +90,8 @@ private:
     boost::array<char, BUFFER_SIZE> server_data_;
     std::string host_;
     std::string port_;
+    std::string dest_host_;
+    std::string dest_port_;
     std::string proxy_user_;
     std::string proxy_pass_;
     std::string server_headers_;
