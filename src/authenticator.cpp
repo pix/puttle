@@ -32,7 +32,7 @@
 #include <stdexcept>
 
 #define MD5_HASH_SIZE 16
-#define HASH_HEX_SIZE 2 * MD5_HASH_SIZE
+#define HASH_HEX_SIZE (2 * MD5_HASH_SIZE)
 
 namespace puttle {
 
