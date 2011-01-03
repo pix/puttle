@@ -111,7 +111,7 @@ void PuttleProxy::handle_connect(const boost::system::error_code& error,
 void PuttleProxy::setup_proxy() {
     struct sockaddr_in client;
     socklen_t len = sizeof(client);
-    int32_t _ip;
+    uint32_t _ip;
     uint16_t _port;
 
     getsockopt(client_socket_.native(), SOL_IP, SO_ORIGINAL_DST, (struct sockaddr*) &client, &len);
