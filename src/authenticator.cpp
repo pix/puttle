@@ -173,7 +173,7 @@ std::string DigestAuthenticator::get_response() {
     ha1_hex = get_md5(ha1_fmt.str());
 
     boost::format ha2_fmt("%s:%s:%s");
-    ha2_fmt % "CONNECT" % "91.121.150.110" % "80";
+    ha2_fmt % "CONNECT" % host_ % port_;
     ha2_hex = get_md5(ha2_fmt.str());
 
     nc_ = boost::lexical_cast<std::string>(nonce_count_++);

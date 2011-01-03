@@ -62,7 +62,7 @@ BOOST_AUTO_TEST_CASE(digest) {
                       "Proxy-Authorization: Digest cnonce=\"89bd9d8d69a674e0\", " \
                       "nonce=\"dcd98b7102dd2f0e8b11d0f600bfb0c093\", " \
                       "qop=\"auth\", realm=\"testrealm@host.com\", " \
-                      "response=\"723249e2b646bf20ed35cfc004c5d0aa\", " \
+                      "response=\"de3abc453c2c446edf757b5b1e44493b\", " \
                       "uri=\"192.168.100.1:80\", " \
                       "username=\"Mufasa\", " \
                       "nc=00000000\r\n");
