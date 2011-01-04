@@ -18,6 +18,7 @@
  * If not, see <http://www.gnu.org/licenses/>.
  *
  */
+#include <logger.h>
 #include <puttle_server.h>
 #include <config.h>
 
@@ -34,6 +35,7 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+using ::puttle::Logger;
 using ::puttle::PuttleServer;
 using ::puttle::ios_deque;
 using ::puttle::io_service_ptr;
@@ -41,9 +43,11 @@ using ::puttle::io_service_ptr;
 namespace po = ::boost::program_options;
 
 int main(int argc, char** argv) {
+    Logger::init();
     try {
         int thread_num = 2;
         int port = 8888;
+        std::string debug_level = "ERROR";
         std::string proxy_host = "localhost";
         std::string proxy_port = "3128";
 
@@ -69,9 +73,18 @@ int main(int argc, char** argv) {
             ("password", po::value<std::string>(&proxy_pass),
              "Proxy password");
 
+            po::options_description debug_options("Logging & Debugging");
+            debug_options.add_options()
+            ("verbosity,v", po::value<std::string>(&debug_level),
+             "Sets the verbosity level: [EMERG | FATAL | ALERT | CRIT | ERROR | WARN | NOTICE | INFO | DEBUG]\n" \
+             "If verbosity is > ERROR, then stdout logging is enabled\n" \
+             "Be careful as it could leak your username and password");
+
+
             po::options_description all_opt;
             all_opt.add(config_options);
             all_opt.add(auth_options);
+            all_opt.add(debug_options);
 
             all_opt.add_options()
             ("help,h", "print this message");
@@ -88,6 +101,12 @@ int main(int argc, char** argv) {
                 return 1;
             }
         }
+
+        Logger::set_level(debug_level);
+        Logger::Log log = Logger::get_logger("main");
+        log.setPriority(Logger::Priority::INFO);
+        log.info("Starting %s v%s", PACKAGE_NAME, PACKAGE_VERSION);
+        log.info("Listening on port %d, forwarding to %s:%s", port, proxy_host.c_str(), proxy_port.c_str());
 
         std::cout << PACKAGE_NAME << " v" << PACKAGE_VERSION;
         std::cout << ". Listening on port: " << port << ", forwarding to: " << proxy_host << ":" << proxy_port << std::endl;

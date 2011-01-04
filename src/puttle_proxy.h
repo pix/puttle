@@ -23,6 +23,7 @@
 
 #include <puttle-common.h>
 #include <authenticator.h>
+#include <logger.h>
 
 #include <map>
 #include <string>
@@ -40,6 +41,7 @@ public:
     };
 
     typedef boost::shared_ptr<PuttleProxy> pointer;
+    typedef std::map<std::string, std::string> headers_map;
 
     static pointer create(boost::asio::io_service& io_service) {  // NOLINT
         return pointer(new PuttleProxy(io_service));
@@ -95,7 +97,8 @@ private:
     std::string proxy_user_;
     std::string proxy_pass_;
     std::string server_headers_;
-    std::map<std::string, std::string> headers_;
+    headers_map headers_;
+    Logger::Log log;
 };
 }
 
