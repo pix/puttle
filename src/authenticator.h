@@ -58,6 +58,7 @@ public:
     virtual std::string get_token() = 0;
     virtual bool has_error() = 0;
     virtual void set_headers(const headers_map& headers);
+    const headers_map& get_headers();
 
 #ifdef HAVE_DEBUG
     // Used in unit tests

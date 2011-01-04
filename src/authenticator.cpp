@@ -84,6 +84,10 @@ void Authenticator::set_headers(const headers_map& headers) {
     headers_ = headers;
 }
 
+const Authenticator::headers_map& Authenticator::get_headers() {
+    return headers_;
+}
+
 NoneAuthenticator::NoneAuthenticator() : Authenticator(std::string(), std::string()) {
 }
 
