@@ -23,6 +23,7 @@
 #include <config.h>
 
 #include <iostream>  // NOLINT
+#include <fstream>
 #include <string>
 #include <deque>
 
@@ -54,6 +55,8 @@ int main(int argc, char** argv) {
         std::string proxy_user;
         std::string proxy_pass;
 
+        std::string config_file;
+
         {
             po::options_description config_options("Configuration");
             config_options.add_options()
@@ -64,7 +67,9 @@ int main(int argc, char** argv) {
             ("proxy-port,P", po::value<std::string>(&proxy_port),
              "Destination proxy port")
             ("proxy-host,H", po::value<std::string>(&proxy_host),
-             "Destination proxy host");
+             "Destination proxy host")
+            ("config-file,c", po::value<std::string>(&config_file),
+             "Configuration file");
 
             po::options_description auth_options("Authentication");
             auth_options.add_options()
@@ -90,11 +95,31 @@ int main(int argc, char** argv) {
             ("help,h", "print this message");
 
             po::variables_map vm;
-            po::store(po::command_line_parser(argc, argv)
-                      .options(all_opt)
-                      .run(),
-                      vm);
-            po::notify(vm);
+
+            // Parse the command line
+            try {
+                po::store(po::command_line_parser(argc, argv)
+                          .options(all_opt)
+                          .run(),
+                          vm);
+                po::notify(vm);
+            } catch (const po::error& e) {
+                std::cerr << "Error in command line: " << e.what() << std::endl;
+                return 1;
+            }
+
+            // If we need to read a config file
+            if (vm.count("config-file")) {
+                std::ifstream file(config_file.c_str());
+                try {
+                    po::store(parse_config_file(file, all_opt), vm);
+                    po::notify(vm);
+                } catch(boost::program_options::error& e) {
+                    std::cerr << "Error in config file: " << e.what() << std::endl;
+                    return 1;
+                }
+            }
+
 
             if (vm.count("help")) {
                 std::cout << all_opt << std::endl;
