@@ -1,0 +1,158 @@
+#!/bin/sh
+#
+# Copyright (C) 2011 Camille Moncelier
+#
+# This file is part of puttle.
+#
+# puttle is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# puttle is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with puttle in the COPYING.txt file.
+# If not, see <http://www.gnu.org/licenses/>.
+#
+
+check_required() {
+    if [ "$(which $1 2>/dev/null)" = "" ]; then
+        echo "Missing dependency: $1"
+        handle_puttle_exit
+        exit 1
+    fi
+}
+
+is_debug() {
+    if [ "$PUTTLE_DEBUG" = 1 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+iptables_rule_exists() {
+    COUNT=$(iptables-save | grep -c "puttle-$1")
+    if [ $COUNT -ne 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+tcp_port_occupied() {
+    COUNT=$(lsof -ni TCP | grep -c ":$i (LISTEN)$")
+    if [ $COUNT -ne 0 ]; then
+        return 0
+    else
+        return 1
+    fi
+}
+
+find_port() {
+    for i in $(seq 9090 10000); do
+        if iptables_rule_exists $i; then
+            continue
+        fi
+        if tcp_port_occupied $i; then
+            continue
+        fi
+        echo $i
+        return 0
+    done
+    return 1
+}
+
+parse_exclude_list() {
+    is_debug && echo "Excluding subnet ${1}"
+    iptables -t nat -A puttle-${PORT} -j RETURN --dest "${1}" -p tcp
+    return "$?"
+}
+parse_include_list() {
+    is_debug && echo "Adding subnet ${1}"
+    iptables -t nat -A puttle-${PORT} -j REDIRECT --dest ${1} \
+        -p tcp --to-ports ${PORT} -m ttl \! --ttl 42
+    return "$?"
+}
+
+parse_wrapper_options() {
+    while true; do
+        [ -z "$1" ] && break
+        case "$1" in
+            "--exclude")
+                [ $# -lt 2 ] && return 1
+                parse_exclude_list $2
+                shift 2
+                [ $? -ne 0 ] && return 1
+                ;;
+            "--include")
+                [ $# -lt 2 ] && return 1
+                parse_include_list $2
+                shift 2
+                [ $? -ne 0 ] && return 1
+                ;;
+            "--")
+                shift 1
+                parse_exclude_list 127.0.0.1/8
+                launch_puttle "$@"
+                break
+                ;;
+            *)
+                echo "Unknown option: $1"
+                trap_exit
+        esac
+    done
+}
+
+handle_puttle_exit() {
+    is_debug && echo "Stopped to local port ${PORT}"
+    iptables -t nat -D OUTPUT -j puttle-${PORT}
+    iptables -t nat -D PREROUTING -j puttle-${PORT}
+    iptables -t nat -F puttle-${PORT}
+    iptables -t nat -X puttle-${PORT}
+}
+
+handle_puttle_start() {
+    is_debug && echo "Started puttle forwarding to local port ${PORT}"
+    iptables -t nat -N puttle-${PORT}
+    iptables -t nat -F puttle-${PORT}
+    iptables -t nat -I OUTPUT 1 -j puttle-${PORT}
+    iptables -t nat -I PREROUTING 1 -j puttle-${PORT}
+}
+
+launch_puttle() {
+    if [ $# -lt 1 ]; then
+        echo "Error: No puttle command specified"
+        return 1
+    fi
+    PUTTLE="$1"
+    shift 1
+    $PUTTLE "$@" --listen-port "${PORT}"
+    return $?
+}
+
+trap_exit() {
+    handle_puttle_exit
+    exit 1
+}
+
+# Check for missing dependencies
+check_required grep
+check_required lsof
+check_required iptables
+check_required iptables-save
+
+# Try to find an open port
+PORT=$(find_port)
+
+# Clean up everything on ^C
+trap trap_exit INT QUIT
+
+# Let's forward !
+handle_puttle_start
+parse_wrapper_options "$@"
+handle_puttle_exit

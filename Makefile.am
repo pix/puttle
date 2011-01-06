@@ -13,3 +13,5 @@ pretty:
 	astyle --brackets=attach \
 		src/*.cpp src/*.h tests/*.cpp tests/*.h
 endif
+
+bin_SCRIPTS = setup-puttle
