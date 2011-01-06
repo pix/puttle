@@ -19,6 +19,7 @@
  *
  */
 #include <puttle_proxy.h>
+#include <logger.h>
 #include <linux/netfilter_ipv4.h>
 
 #include <map>
@@ -34,7 +35,8 @@ typedef boost::asio::detail::socket_option::integer<IPPROTO_IP, IP_TTL> time_to_
 PuttleProxy::PuttleProxy(boost::asio::io_service& io_service )  // NOLINT
     : client_socket_(io_service),
       server_socket_(io_service),
-      resolver_(io_service) {
+      resolver_(io_service),
+      log(Logger::get_logger("puttle.puttle-proxy")) {
 }
 
 PuttleProxy::~PuttleProxy() {
@@ -47,6 +49,9 @@ tcp::socket& PuttleProxy::socket() {
 }
 
 void PuttleProxy::start_forwarding() {
+    log.infoStream() << client_socket_.remote_endpoint().address().to_string() << ":" <<
+                     client_socket_.remote_endpoint().port() << " -> " << dest_host_ << ":" << dest_port_;
+
     boost::system::error_code ec;
     handle_server_write(ec);
     handle_client_write(ec);
@@ -90,6 +95,7 @@ void PuttleProxy::handle_resolve(const boost::system::error_code& error,
                                      boost::bind(&PuttleProxy::handle_connect, shared_from_this(),
                                              boost::asio::placeholders::error, ++endpoint_iterator));
     } else {
+        log.error("Unable to resolve: %s:%s", host_.c_str(), port_.c_str());
         shutdown();
     }
 }
@@ -106,6 +112,7 @@ void PuttleProxy::handle_connect(const boost::system::error_code& error,
                                      boost::bind(&PuttleProxy::handle_connect, shared_from_this(),
                                              boost::asio::placeholders::error, ++endpoint_iterator));
     } else {
+        log.error("Unable to connect to %s:%s", host_.c_str(), port_.c_str());
         shutdown();
     }
 }
@@ -130,10 +137,22 @@ void PuttleProxy::setup_proxy() {
     std::string connect_string = fmt.str();
 
     if (authenticator_ != NULL) {
-        if (authenticator_->has_error())
-            shutdown_error();
-        else if (authenticator_->has_token())
+        if (authenticator_->has_error()) {
+            log.error("Unable to authenticate the request to: %s:%s", dest_host_.c_str(), dest_port_.c_str());
+            Logger::push_context("headers");
+            log.errorStream() << "Headers:";
+            const headers_map& map = authenticator_->get_headers();
+            headers_map::const_iterator end = map.end();
+            for (headers_map::const_iterator it = map.begin(); it != end; ++it) {
+                log.errorStream() << it->first << ": " << it->second;
+            }
+            log.errorStream() << "Answer:";
+            log.errorStream() << authenticator_->get_token();
+            Logger::pop_context();
+            shutdown();
+        } else if (authenticator_->has_token()) {
             connect_string += authenticator_->get_token();
+        }
     }
 
     connect_string += "\r\n";
@@ -176,6 +195,7 @@ void PuttleProxy::handle_proxy_response(const boost::system::error_code& error,
             check_proxy_response();
         }
     } else {
+        log.error("Error while reading proxy response: %s", error.message().c_str());
         shutdown();
     }
 }
@@ -184,8 +204,11 @@ void PuttleProxy::check_proxy_response() {
     size_t pos = server_headers_.find("HTTP/");
 
     // HTTP/ Should be the first header line
-    if ( pos != 0 )
+    if ( pos != 0 ) {
+        log.error("Unable to parse the proxy answer, first line contains garbage");
+        log.debug(server_headers_);
         shutdown_error();
+    }
 
     size_t first_space = server_headers_.find_first_of(" ", pos);
     std::string status = server_headers_.substr(first_space + 1, 3);
@@ -210,6 +233,7 @@ void PuttleProxy::check_proxy_response() {
         http_status = boost::lexical_cast<int>(status);
     } catch(const boost::bad_lexical_cast& e) {
         // We failed to parse the proxy answer
+        log.error("Unable to parse the proxy answer");
         shutdown_error();
     }
     switch (http_status) {
@@ -220,6 +244,7 @@ void PuttleProxy::check_proxy_response() {
         handle_proxy_auth();
         break;
     default:
+        log.error("Unknown http status code: %d", http_status);
         shutdown();
         break;
     }
