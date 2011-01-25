@@ -41,6 +41,7 @@ BOOST_AUTO_TEST_CASE(basic) {
                       "Proxy-Authorization: Basic QWxhZGRpbjpvcGVuIHNlc2FtZQ==\r\n");
 }
 
+#ifdef HAVE_DEBUG
 BOOST_AUTO_TEST_CASE(digest) {
     Proxy p = Proxy::parse("http://Mufasa:Circle Of Life@dummy.com");
     Authenticator::pointer auth = Authenticator::create(
@@ -68,5 +69,6 @@ BOOST_AUTO_TEST_CASE(digest) {
                       "username=\"Mufasa\", " \
                       "nc=00000000\r\n");
 }
+#endif
 
 BOOST_AUTO_TEST_SUITE_END()

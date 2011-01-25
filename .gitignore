@@ -24,6 +24,8 @@ Makefile
 /config.h
 /config.h.in
 /stamp-h1
+/puttle-*.*.*.tar.gz
+/puttle-*.*.*.tar.bz2
 
 # libtool
 libtool

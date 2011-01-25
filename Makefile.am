@@ -1,10 +1,8 @@
 ACLOCAL_AMFLAGS = -I shave/shave
 
-SUBDIRS = src
+SUBDIRS = src tests
 
 if HAVE_DEBUG
-	SUBDIRS += tests
-
 lint:
 	$(top_srcdir)/vendors/cpplint \
 		--filter=-build/header_guard,-whitespace/line_length,-whitespace/labels \
@@ -15,3 +13,5 @@ pretty:
 endif
 
 bin_SCRIPTS = setup-puttle
+
+EXTRA_DIST = $(bin_SCRIPTS)
