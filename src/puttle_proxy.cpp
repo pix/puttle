@@ -27,16 +27,22 @@
 #include <boost/format.hpp>
 #include <boost/lexical_cast.hpp>
 #include <boost/algorithm/string.hpp>
+#include <boost/lambda/lambda.hpp>
+#include <boost/lambda/bind.hpp>
+#include <boost/ptr_container/ptr_vector.hpp>
 
 namespace puttle {
 
 typedef boost::asio::detail::socket_option::integer<IPPROTO_IP, IP_TTL> time_to_live;
 
-PuttleProxy::PuttleProxy(boost::asio::io_service& io_service )  // NOLINT
+PuttleProxy::PuttleProxy(boost::asio::io_service& io_service, proxy_vector proxies)  // NOLINT
     : client_socket_(io_service),
       server_socket_(io_service),
       resolver_(io_service),
+      proxies_(proxies),
       log(Logger::get_logger("puttle.puttle-proxy")) {
+
+    std::random_shuffle(proxies_.begin(), proxies_.end() );
 }
 
 PuttleProxy::~PuttleProxy() {
@@ -49,35 +55,34 @@ tcp::socket& PuttleProxy::socket() {
 }
 
 void PuttleProxy::start_forwarding() {
-    log.infoStream() << client_socket_.remote_endpoint().address().to_string() << ":" <<
-                     client_socket_.remote_endpoint().port() << " -> " << dest_host_ << ":" << dest_port_;
+    log.infoStream() <<
+                     client_socket_.remote_endpoint().address().to_string() << ":" << client_socket_.remote_endpoint().port()
+                     << " -> " << dest_host_ << ":" << dest_port_ << " via: "
+                     << (*it_proxy)->host << ":" << (*it_proxy)->port;
 
     boost::system::error_code ec;
     handle_server_write(ec);
     handle_client_write(ec);
 }
 
-void PuttleProxy::set_proxy_user(const std::string& user) {
-    proxy_user_ = user;
-}
-
-void PuttleProxy::set_proxy_pass(const std::string& pass) {
-    proxy_pass_ = pass;
-}
-
-
-void PuttleProxy::forward_to(std::string host, std::string port) {
-    host_ = host;
-    port_ = port;
+void PuttleProxy::init_forward() {
+    it_proxy = proxies_.begin();
     resolve_destination();
 }
 
 void PuttleProxy::resolve_destination() {
-    tcp::resolver::query query(host_, port_);
-    resolver_.async_resolve(query,
-                            boost::bind(&PuttleProxy::handle_resolve, shared_from_this(),
-                                        boost::asio::placeholders::error,
-                                        boost::asio::placeholders::iterator));
+    if (it_proxy != proxies_.end()) {
+        Proxy& p = *(it_proxy->get());
+
+        log.debug("Resolving %s:%u", p.host.c_str(), p.port);
+        tcp::resolver::query query(p.host, boost::lexical_cast<std::string>(p.port));
+        resolver_.async_resolve(query,
+                                boost::bind(&PuttleProxy::handle_resolve, shared_from_this(),
+                                            boost::asio::placeholders::error,
+                                            boost::asio::placeholders::iterator));
+    } else {
+        shutdown();
+    }
 }
 
 void PuttleProxy::handle_resolve(const boost::system::error_code& error,
@@ -87,16 +92,22 @@ void PuttleProxy::handle_resolve(const boost::system::error_code& error,
         // will be tried until we successfully establish a connection.
         tcp::endpoint endpoint = *endpoint_iterator;
 
-        // Opens the socket so we can set the ttl option
-        server_socket_.open(boost::asio::ip::tcp::v4());
-        time_to_live ttl(42);
-        server_socket_.set_option(ttl);
-        server_socket_.async_connect(endpoint,
-                                     boost::bind(&PuttleProxy::handle_connect, shared_from_this(),
-                                             boost::asio::placeholders::error, ++endpoint_iterator));
+        try {
+            // Opens the socket so we can set the ttl option
+            server_socket_.open(boost::asio::ip::tcp::v4());
+            time_to_live ttl(42);
+            server_socket_.set_option(ttl);
+            server_socket_.async_connect(endpoint,
+                                         boost::bind(&PuttleProxy::handle_connect, shared_from_this(),
+                                                 boost::asio::placeholders::error, ++endpoint_iterator));
+        } catch(const boost::system::system_error &e) {
+            log.errorStream() << "Could not open a socket: " << e.what();
+            shutdown_error();
+        }
     } else {
-        log.error("Unable to resolve: %s:%s", host_.c_str(), port_.c_str());
-        shutdown();
+        log.error("Unable to resolve: %s:%u, skipping", (*it_proxy)->host.c_str(), (*it_proxy)->port);
+        it_proxy++;
+        resolve_destination();
     }
 }
 
@@ -112,8 +123,9 @@ void PuttleProxy::handle_connect(const boost::system::error_code& error,
                                      boost::bind(&PuttleProxy::handle_connect, shared_from_this(),
                                              boost::asio::placeholders::error, ++endpoint_iterator));
     } else {
-        log.error("Unable to connect to %s:%s", host_.c_str(), port_.c_str());
-        shutdown();
+        log.error("Unable to connect to %s:%u, skippin", (*it_proxy)->host.c_str(), (*it_proxy)->port);
+        it_proxy++;
+        resolve_destination();
     }
 }
 
@@ -139,19 +151,14 @@ void PuttleProxy::setup_proxy() {
     if (authenticator_ != NULL) {
         if (authenticator_->has_error()) {
             log.error("Unable to authenticate the request to: %s:%s", dest_host_.c_str(), dest_port_.c_str());
-            Logger::push_context("headers");
-            log.errorStream() << "Headers:";
-            const headers_map& map = authenticator_->get_headers();
-            headers_map::const_iterator end = map.end();
-            for (headers_map::const_iterator it = map.begin(); it != end; ++it) {
-                log.errorStream() << it->first << ": " << it->second;
-            }
+            log_headers(Logger::Priority::ERROR, "Headers", authenticator_->get_headers());
             log.errorStream() << "Answer:";
             log.errorStream() << authenticator_->get_token();
-            Logger::pop_context();
             shutdown();
         } else if (authenticator_->has_token()) {
-            connect_string += authenticator_->get_token();
+            std::string token = authenticator_->get_token();
+            connect_string += token;
+            log.debugStream() << "Autenticator: " << token;
         }
     }
 
@@ -236,6 +243,9 @@ void PuttleProxy::check_proxy_response() {
         log.error("Unable to parse the proxy answer");
         shutdown_error();
     }
+
+    log.debugStream() << "Got a \"" << status << "\" status code";
+
     switch (http_status) {
     case 200:
         start_forwarding();
@@ -245,6 +255,7 @@ void PuttleProxy::check_proxy_response() {
         break;
     default:
         log.error("Unknown http status code: %d", http_status);
+        log_headers(Logger::Priority::ERROR, "Proxy error", headers_);
         shutdown();
         break;
     }
@@ -257,12 +268,14 @@ void PuttleProxy::handle_proxy_auth() {
             method = method.substr(0, method.find_first_of(" "));
 
             Authenticator::Method m = Authenticator::get_method(method);
-            authenticator_ = Authenticator::create(m, proxy_user_, proxy_pass_, dest_host_, dest_port_);
+            authenticator_ = Authenticator::create(m, *(it_proxy->get()), dest_host_, dest_port_);
         }
 
         if (authenticator_ != NULL) {
             authenticator_->set_headers(headers_);
         }
+
+        log_headers(Logger::Priority::DEBUG, "Authentication", headers_);
 
         server_headers_.clear();
         headers_.clear();
@@ -273,6 +286,18 @@ void PuttleProxy::handle_proxy_auth() {
         /* FIXME: Can we get here ? */
         shutdown_error();
     }
+}
+
+void PuttleProxy::log_headers(const Logger::Priority& priority, std::string context, const headers_map& headers) {
+    if (!log.isPriorityEnabled(priority))
+            return;
+
+    Logger::push_context(context);
+    headers_map::const_iterator end = headers.end();
+    for (headers_map::const_iterator it = headers.begin(); it != end; ++it) {
+        log.getStream(priority) << it->first << ": " << it->second;
+    }
+    Logger::pop_context();
 }
 
 void PuttleProxy::handle_server_read(const boost::system::error_code& error,

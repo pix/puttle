@@ -18,41 +18,38 @@
  * If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#ifndef PUTTLE_SRC_LOGGER_H
-#define PUTTLE_SRC_LOGGER_H
+#ifndef PUTTLE_SRC_PROXY_H
+#define PUTTLE_SRC_PROXY_H
 
 #include <puttle-common.h>
-#include <singleton.h>
 
 #include <string>
-#include "log4cpp/Appender.hh"
-#include "log4cpp/SyslogAppender.hh"
-#include "log4cpp/Category.hh"
+#include <vector>
 
+#include <boost/shared_ptr.hpp>
 
 namespace puttle {
 
-class Logger : public Singleton<Logger> {
-    friend class Singleton<Logger>;
+struct Proxy {
 public:
-    typedef log4cpp::Category& Log;
-    typedef log4cpp::CategoryStream Stream;
-    typedef log4cpp::Priority::PriorityLevel Priority;
-    static void init();
-    static void set_level(const std::string& level);
-    static Log get_logger(const std::string& name);
-    static void push_context(const std::string& context);
-    static void pop_context();
 
+    Proxy();
+    Proxy(std::string host_, uint16_t port_ = 3128,
+          std::string username_ = "", std::string password_ = "");
+
+    static Proxy parse(std::string url);
+    bool is_valid();
+
+    uint16_t port;
+    std::string host;
+    std::string username;
+    std::string password;
+
+    static const Proxy invalid_proxy;
 private:
-    Logger();
-    void set_level_impl(const std::string& level);
-
-    log4cpp::SyslogAppender* syslog;
-    log4cpp::Appender* stdout;
 };
+
+typedef std::vector<boost::shared_ptr<Proxy> > proxy_vector;
 }
 
-#endif /* end of include guard: PUTTLE_SRC_LOGGER_H */
-
-
+#endif /* end of include guard: PUTTLE_SRC_PROXY_H */

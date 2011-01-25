@@ -19,6 +19,7 @@
  *
  */
 #include <authenticator.h>
+#include <proxy.h>
 #include <openssl/md5.h>
 
 #include <boost/assign.hpp>
@@ -38,9 +39,8 @@ namespace puttle {
 
 typedef boost::archive::iterators::base64_from_binary<boost::archive::iterators::transform_width<std::string::const_iterator, 6, 8> > base64_t;
 
-Authenticator::Authenticator(const std::string& user, const std::string& pass) :
-    user_(user),
-    pass_(pass) {
+Authenticator::Authenticator(const Proxy& proxy) :
+    proxy_(proxy) {
     boost::call_once(Authenticator::init_rng, Authenticator::init_rng_);
 }
 
@@ -67,12 +67,12 @@ Authenticator::Method Authenticator::get_method(const std::string& method) {
         return Authenticator::AUTH_INVALID;
 }
 
-Authenticator::pointer Authenticator::create(Authenticator::Method m, const std::string& user, const std::string& pass, const std::string& host, const std::string& port) {
+Authenticator::pointer Authenticator::create(Authenticator::Method m, const Proxy& proxy, const std::string& host, const std::string& port) {
     switch (m) {
     case Authenticator::AUTH_BASIC:
-        return pointer(new BasicAuthenticator(user, pass));
+        return pointer(new BasicAuthenticator(proxy));
     case Authenticator::AUTH_DIGEST:
-        return pointer(new DigestAuthenticator(user, pass, host, port));
+        return pointer(new DigestAuthenticator(proxy, host, port));
     case Authenticator::AUTH_NONE:
         return pointer(new NoneAuthenticator());
     default:
@@ -88,7 +88,7 @@ const Authenticator::headers_map& Authenticator::get_headers() {
     return headers_;
 }
 
-NoneAuthenticator::NoneAuthenticator() : Authenticator(std::string(), std::string()) {
+NoneAuthenticator::NoneAuthenticator() : Authenticator(Proxy::invalid_proxy) {
 }
 
 bool NoneAuthenticator::has_token() {
@@ -104,7 +104,7 @@ std::string NoneAuthenticator::get_token() {
 }
 
 
-BasicAuthenticator::BasicAuthenticator(const std::string& user, const std::string& pass) : Authenticator(user, pass), retries(2) {
+BasicAuthenticator::BasicAuthenticator(const Proxy& proxy) : Authenticator(proxy), retries(2) {
 }
 
 bool BasicAuthenticator::has_token() {
@@ -119,7 +119,7 @@ std::string BasicAuthenticator::get_token() {
     --retries;
 
     boost::format cred_format("%s:%s");
-    cred_format % user_ % pass_;
+    cred_format % proxy_.username % proxy_.password;
     std::string cred = cred_format.str();
 
     std::string enc(base64_t(cred.begin()), base64_t(cred.end()));
@@ -131,8 +131,8 @@ std::string BasicAuthenticator::get_token() {
     return fmt.str();
 }
 
-DigestAuthenticator::DigestAuthenticator(const std::string& user, const std::string& pass, const std::string& host, const std::string& port) :
-    Authenticator(user, pass),
+DigestAuthenticator::DigestAuthenticator(const Proxy& proxy, const std::string& host, const std::string& port) :
+    Authenticator(proxy),
     retries(5),
     nonce_count_(0),
     host_(host),
@@ -173,7 +173,7 @@ std::string DigestAuthenticator::get_response() {
     std::string ha2_hex;
 
     boost::format ha1_fmt("%s:%s:%s");
-    ha1_fmt % user_ % realm_ % pass_;
+    ha1_fmt % proxy_.username % realm_ % proxy_.password;
     ha1_hex = get_md5(ha1_fmt.str());
 
     boost::format ha2_fmt("%s:%s:%s");
@@ -208,7 +208,7 @@ std::string DigestAuthenticator::get_token() {
     --retries;
 
     // Build answer parameters
-    params["username"] = user_;
+    params["username"] = proxy_.username;
     params["realm"] = realm_;
     params["nonce"] = nonce_;
     params["uri"] = host_ + ":" + port_;

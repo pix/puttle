@@ -21,6 +21,8 @@
 #ifndef PUTTLE_SRC_SINGLETON_H
 #define PUTTLE_SRC_SINGLETON_H
 
+#include <puttle-common.h>
+
 #include <boost/utility.hpp>
 #include <boost/thread/once.hpp>
 #include <boost/scoped_ptr.hpp>

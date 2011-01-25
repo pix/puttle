@@ -20,10 +20,13 @@
  */
 #include <logger.h>
 
+#include <log4cpp/BasicLayout.hh>
+#include <log4cpp/OstreamAppender.hh>
+#include <log4cpp/NDC.hh>
+
 #include <string>
-#include "log4cpp/BasicLayout.hh"
-#include "log4cpp/OstreamAppender.hh"
-#include "log4cpp/NDC.hh"
+
+#include <boost/format.hpp>
 
 namespace puttle {
 
@@ -54,9 +57,13 @@ Logger::Logger() :
     syslog = new log4cpp::SyslogAppender("syslog", "puttle");
     syslog->setLayout(new log4cpp::BasicLayout());
 
+    stdout = new log4cpp::OstreamAppender("puttle", &std::cout);
+    stdout->setLayout(new log4cpp::BasicLayout());
+
     log4cpp::Category& root = log4cpp::Category::getRoot();
-    root.addAppender(syslog);
     root.setPriority(log4cpp::Priority::ERROR);
+    root.addAppender(syslog);
+    root.addAppender(stdout);
 }
 
 void Logger::set_level_impl(const std::string& level) {
@@ -68,11 +75,6 @@ void Logger::set_level_impl(const std::string& level) {
     } catch(const std::invalid_argument& e) {
         root.errorStream() << level << " is not a valid debug level.";
         root.errorStream() << "Using 'ERROR' as the error level";
-    }
-
-    if (v > log4cpp::Priority::ERROR && stdout == NULL) {
-        stdout = new log4cpp::OstreamAppender("puttle", &std::cout);
-        root.addAppender(stdout);
     }
 
     root.setPriority(v);

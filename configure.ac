@@ -4,12 +4,19 @@ AC_CONFIG_HEADERS(config.h)
 AC_PROG_CXX
 AC_PROG_LIBTOOL
 
+AC_CHECK_LIB([boost_regex], [main], [LIBS="$LIBS -lboost_regex"], [AC_MSG_ERROR([Not Found: boost_regex])])
 AC_CHECK_LIB([boost_system], [main], [LIBS="$LIBS -lboost_system"], [AC_MSG_ERROR([Not Found: boost_system])])
 AC_CHECK_LIB([boost_thread], [main], [LIBS="$LIBS -lboost_thread"], [AC_MSG_ERROR([Not Found: boost_thread])])
 AC_CHECK_LIB([boost_program_options], [main], [LIBS="$LIBS -lboost_program_options"], [AC_MSG_ERROR([Not Found: boost_program_options])])
 
 PKG_CHECK_MODULES(LOG4CPP, log4cpp)
 PKG_CHECK_MODULES(OPENSSL, openssl >= 0.9.6)
+
+AC_LANG_SAVE
+AC_LANG_CPLUSPLUS
+AC_CHECK_HEADERS([tr1/cstdint])
+AC_CHECK_HEADERS([boost/cstdint.hpp])
+AC_LANG_RESTORE
 
 dnl enable debug
 AC_MSG_CHECKING([whether to build with debug information])

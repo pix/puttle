@@ -20,7 +20,8 @@ Prerequisites
 How to use it:
 --------------
 
-setup-puttle --include w.x.y.x/n --exlude o.t.h.e/r -- puttle --proxy-host oe
+setup-puttle --include w.x.y.x/n --exlude o.t.h.e/r -- puttle \
+ --proxy http://user:password@host:port --proxy http://anotherhost:anotherport
 
 
 [1]: https://github.com/apenwarr/sshuttle

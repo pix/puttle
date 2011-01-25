@@ -18,16 +18,20 @@
  * If not, see <http://www.gnu.org/licenses/>.
  *
  */
-#include <logger.h>
+#include <puttle-common.h>
 #include <puttle_server.h>
-#include <config.h>
+#include <logger.h>
+#include <proxy.h>
 
 #include <iostream>  // NOLINT
-#include <fstream>
+#include <fstream>   // NOLINT
 #include <string>
+#include <vector>
 #include <deque>
 
-#include <boost/lexical_cast.hpp>
+#include <boost/any.hpp>
+#include <boost/format.hpp>
+#include <boost/shared_ptr.hpp>
 #include <boost/thread/thread.hpp>
 
 #include <boost/program_options/cmdline.hpp>
@@ -36,25 +40,31 @@
 #include <boost/program_options/parsers.hpp>
 #include <boost/program_options/variables_map.hpp>
 
+using ::puttle::Proxy;
 using ::puttle::Logger;
 using ::puttle::PuttleServer;
 using ::puttle::ios_deque;
 using ::puttle::io_service_ptr;
+using ::puttle::proxy_vector;
 
 namespace po = ::boost::program_options;
+
+
+namespace puttle {
+/* Overload the program_options 'validate' function for
+ * user-defined class.
+ */
+void validate(boost::any& v, const std::vector<std::string>& values, boost::shared_ptr<Proxy>*, int);
+}
 
 int main(int argc, char** argv) {
     Logger::init();
     try {
         int thread_num = 2;
         int port = 8888;
+
+        proxy_vector proxies;
         std::string debug_level = "ERROR";
-        std::string proxy_host = "localhost";
-        std::string proxy_port = "3128";
-
-        std::string proxy_user;
-        std::string proxy_pass;
-
         std::string config_file;
 
         {
@@ -64,19 +74,14 @@ int main(int argc, char** argv) {
              "Number of threads")
             ("listen-port,l", po::value<int>(&port),
              "Port to listen to")
-            ("proxy-port,P", po::value<std::string>(&proxy_port),
-             "Destination proxy port")
-            ("proxy-host,H", po::value<std::string>(&proxy_host),
-             "Destination proxy host")
             ("config-file,c", po::value<std::string>(&config_file),
              "Configuration file");
 
-            po::options_description auth_options("Authentication");
+            po::options_description auth_options("Remote proxy");
             auth_options.add_options()
-            ("user", po::value<std::string>(&proxy_user),
-             "Proxy username")
-            ("password", po::value<std::string>(&proxy_pass),
-             "Proxy password");
+            ("proxy,p", po::value<proxy_vector>(&proxies),
+             "proxy value (in scheme://user:password@host:port form)\n" \
+             "Only the http scheme is supported");
 
             po::options_description debug_options("Logging & Debugging");
             debug_options.add_options()
@@ -103,7 +108,7 @@ int main(int argc, char** argv) {
                           .run(),
                           vm);
                 po::notify(vm);
-            } catch (const po::error& e) {
+            } catch(const po::error& e) {
                 std::cerr << "Error in command line: " << e.what() << std::endl;
                 return 1;
             }
@@ -114,14 +119,14 @@ int main(int argc, char** argv) {
                 try {
                     po::store(parse_config_file(file, all_opt), vm);
                     po::notify(vm);
-                } catch(boost::program_options::error& e) {
+                } catch(const boost::program_options::error& e) {
                     std::cerr << "Error in config file: " << e.what() << std::endl;
                     return 1;
                 }
             }
 
 
-            if (vm.count("help")) {
+            if (vm.count("help") || !vm.count("proxy")) {
                 std::cout << all_opt << std::endl;
                 return 1;
             }
@@ -130,12 +135,13 @@ int main(int argc, char** argv) {
         Logger::set_level(debug_level);
         Logger::Log log = Logger::get_logger("main");
         log.setPriority(Logger::Priority::INFO);
+
         log.info("Starting %s v%s", PACKAGE_NAME, PACKAGE_VERSION);
-        log.info("Listening on port %d, forwarding to %s:%s", port, proxy_host.c_str(), proxy_port.c_str());
+        log.info("Listening on port %d, forwarding to:", port);
 
-        std::cout << PACKAGE_NAME << " v" << PACKAGE_VERSION;
-        std::cout << ". Listening on port: " << port << ", forwarding to: " << proxy_host << ":" << proxy_port << std::endl;
-
+        for (size_t i = 0; i < proxies.size(); i++) {
+            log.info("        %s:%d", proxies[i]->host.c_str(), proxies[i]->port);
+        }
         ios_deque io_services;
         std::deque<boost::asio::io_service::work> io_service_work;
 
@@ -147,11 +153,8 @@ int main(int argc, char** argv) {
             io_service_work.push_back(boost::asio::io_service::work(*ios));
             thr_grp.create_thread(boost::bind(&boost::asio::io_service::run, ios));
         }
-        PuttleServer puttle_server(io_services, port);
-        puttle_server.set_proxy_host(proxy_host);
-        puttle_server.set_proxy_port(proxy_port);
-        puttle_server.set_proxy_user(proxy_user);
-        puttle_server.set_proxy_pass(proxy_pass);
+
+        PuttleServer puttle_server(io_services, port, proxies);
 
         thr_grp.join_all();
     } catch(const std::exception& e) {
@@ -161,3 +164,25 @@ int main(int argc, char** argv) {
 
     return 0;
 }
+
+
+/* Overload the program_options 'validate' function for
+ * user-defined class.
+ */
+void puttle::validate(boost::any& v,                          // NOLINT: overloaded method signature
+                      const std::vector<std::string>& values,
+                      boost::shared_ptr<Proxy>*, int) {
+    // Make sure no previous assignment to 'a' was made.
+    po::validators::check_first_occurrence(v);
+    // Extract the first string from 'values'. If there is more than
+    // one string, it's an error, and exception will be thrown.
+    const std::string& s = po::validators::get_single_string(values);
+    Proxy p = Proxy::parse(s);
+
+    if (p.is_valid()) {
+        v = boost::any(boost::shared_ptr<Proxy>(new Proxy(p)));
+    } else {
+        throw po::validation_error(po::validation_error::invalid_option_value);
+    }
+}
+

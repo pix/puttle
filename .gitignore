@@ -5,6 +5,8 @@
 
 Makefile.in
 Makefile
+/COPYING
+/INSTALL
 
 # http://www.gnu.org/software/autoconf
 
@@ -43,6 +45,8 @@ ltmain.sh
 
 # puttle
 src/puttle
+tests/tests
+src/.libs
 
 # Astyle backups
 *.h.orig

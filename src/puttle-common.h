@@ -21,14 +21,24 @@
 #ifndef PUTTLE_SRC_PUTTLE_COMMON_H
 #define PUTTLE_SRC_PUTTLE_COMMON_H
 
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+#if defined(HAVE_CSTDINT)
+#include <cstdint>
+#elif defined(HAVE_BOOST_CSTDINT_HPP)
+#include <boost/cstdint.hpp>
+#endif
+
 #include <deque>
+#include <vector>
 #include <boost/bind.hpp>
 #include <boost/asio.hpp>
 #include <boost/shared_ptr.hpp>
 #include <boost/enable_shared_from_this.hpp>
 
 namespace puttle {
-
 typedef boost::shared_ptr<boost::asio::io_service> io_service_ptr;
 typedef std::deque<io_service_ptr> ios_deque;
 }

@@ -21,39 +21,26 @@
 #include <puttle_server.h>
 #include <puttle_proxy.h>
 #include <authenticator.h>
+#include <proxy.h>
 
 #include <string>
+#include <vector>
 
 namespace puttle {
 
-PuttleServer::PuttleServer(const ios_deque& io_services, int port)
+PuttleServer::PuttleServer(const ios_deque& io_services, int port, const proxy_vector& proxies)
     : io_services_(io_services),
-      acceptor_(*io_services.front(), boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)) {
+      acceptor_(*io_services.front(), boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+      proxies_(proxies) {
     boost::asio::socket_base::reuse_address reuse_address(true);
     acceptor_.set_option(reuse_address);
     start_accept();
 }
 
-void PuttleServer::set_proxy_port(const std::string& port) {
-    proxy_port_ = port;
-}
-
-void PuttleServer::set_proxy_host(const std::string& host) {
-    proxy_host_ = host;
-}
-
-void PuttleServer::set_proxy_user(const std::string& user) {
-    proxy_user_ = user;
-}
-
-void PuttleServer::set_proxy_pass(const std::string& pass) {
-    proxy_pass_ = pass;
-}
-
 void PuttleServer::start_accept() {
     io_services_.push_back(io_services_.front());
     io_services_.pop_front();
-    PuttleProxy::pointer new_proxy = PuttleProxy::create(*io_services_.front());
+    PuttleProxy::pointer new_proxy = PuttleProxy::create(*io_services_.front(), proxies_);
 
     acceptor_.async_accept(new_proxy->socket(),
                            boost::bind(&PuttleServer::handle_accept, this, new_proxy,
@@ -62,9 +49,7 @@ void PuttleServer::start_accept() {
 
 void PuttleServer::handle_accept(PuttleProxy::pointer new_proxy, const boost::system::error_code& error) {
     if (!error) {
-        new_proxy->set_proxy_user(proxy_user_);
-        new_proxy->set_proxy_pass(proxy_pass_);
-        new_proxy->forward_to(proxy_host_, proxy_port_);
+        new_proxy->init_forward();
         start_accept();
     }
 }

@@ -24,8 +24,10 @@
 #include <puttle-common.h>
 #include <puttle_proxy.h>
 #include <authenticator.h>
+#include <proxy.h>
 
 #include <string>
+#include <vector>
 #include <deque>
 
 namespace puttle {
@@ -38,22 +40,14 @@ typedef std::deque<io_service_ptr> ios_deque;
 class PuttleServer {
 public:
 
-    PuttleServer(const ios_deque& io_services, int port);
-
+    PuttleServer(const ios_deque& io_services, int port, const proxy_vector& proxies);
     void start_accept();
-    void set_proxy_port(const std::string& port);
-    void set_proxy_host(const std::string& host);
-    void set_proxy_user(const std::string& user);
-    void set_proxy_pass(const std::string& pass);
 
 private:
     void handle_accept(PuttleProxy::pointer new_proxy, const boost::system::error_code& error);
-    std::string proxy_port_;
-    std::string proxy_host_;
-    std::string proxy_user_;
-    std::string proxy_pass_;
     ios_deque io_services_;
     tcp::acceptor acceptor_;
+    const proxy_vector& proxies_;
 };
 }
 

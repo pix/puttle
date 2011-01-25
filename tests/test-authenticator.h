@@ -23,15 +23,16 @@
 #include <map>
 #include <string>
 
+using ::puttle::Proxy;
 using ::puttle::Authenticator;
 
 BOOST_AUTO_TEST_SUITE(authenticator)
 
 BOOST_AUTO_TEST_CASE(basic) {
+    Proxy p = Proxy::parse("http://Aladdin:open sesame@dummy.com");
     Authenticator::pointer auth = Authenticator::create(
                                       Authenticator::AUTH_BASIC,
-                                      "Aladdin",
-                                      "open sesame",
+                                      p,
                                       "192.168.100.1",
                                       "80");
 
@@ -41,10 +42,10 @@ BOOST_AUTO_TEST_CASE(basic) {
 }
 
 BOOST_AUTO_TEST_CASE(digest) {
+    Proxy p = Proxy::parse("http://Mufasa:Circle Of Life@dummy.com");
     Authenticator::pointer auth = Authenticator::create(
                                       Authenticator::AUTH_DIGEST,
-                                      "Mufasa",
-                                      "Circle Of Life",
+                                      p,
                                       "192.168.100.1",
                                       "80");
 

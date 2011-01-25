@@ -21,8 +21,8 @@
 #ifndef PUTTLE_SRC_PUTTLE_AUTHENTICATOR_H
 #define PUTTLE_SRC_PUTTLE_AUTHENTICATOR_H
 
-#include <cstdint>
-#include <config.h>
+#include <puttle-common.h>
+#include <proxy.h>
 
 #include <map>
 #include <string>
@@ -48,10 +48,10 @@ public:
     typedef std::map<std::string, std::string> headers_map;
 
     typedef boost::shared_ptr<Authenticator> pointer;
-    static pointer create(Authenticator::Method m, const std::string& user, const std::string& pass, const std::string& host, const std::string& port);
+    static pointer create(Authenticator::Method m, const Proxy& proxy, const std::string& host, const std::string& port);
     static Method get_method(const std::string& method);
 
-    Authenticator(const std::string& user, const std::string& pass);
+    explicit Authenticator(const Proxy& proxy);
     virtual ~Authenticator();
 
     virtual bool has_token() = 0;
@@ -72,8 +72,7 @@ protected:
     static boost::once_flag init_rng_;
     static void init_rng();
 
-    std::string user_;
-    std::string pass_;
+    const Proxy& proxy_;
     headers_map headers_;
 
 private:
@@ -82,7 +81,7 @@ private:
 
 class BasicAuthenticator : public Authenticator {
 public:
-    BasicAuthenticator(const std::string& user, const std::string& pass);
+    explicit BasicAuthenticator(const Proxy& proxy);
     virtual bool has_token();
     virtual std::string get_token();
     virtual bool has_error();
@@ -94,7 +93,7 @@ private:
 class DigestAuthenticator : public Authenticator {
 public:
 
-    DigestAuthenticator(const std::string& user, const std::string& pass, const std::string& host, const std::string& port);
+    DigestAuthenticator(const Proxy& proxy, const std::string& host, const std::string& port);
     virtual bool has_token();
     virtual std::string get_token();
     virtual bool has_error();

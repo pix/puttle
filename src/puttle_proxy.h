@@ -24,9 +24,13 @@
 #include <puttle-common.h>
 #include <authenticator.h>
 #include <logger.h>
+#include <proxy.h>
 
 #include <map>
 #include <string>
+#include <vector>
+
+#include <boost/ptr_container/ptr_vector.hpp>
 
 namespace puttle {
 
@@ -43,20 +47,21 @@ public:
     typedef boost::shared_ptr<PuttleProxy> pointer;
     typedef std::map<std::string, std::string> headers_map;
 
-    static pointer create(boost::asio::io_service& io_service) {  // NOLINT
-        return pointer(new PuttleProxy(io_service));
+    static pointer create(boost::asio::io_service& io_service, const proxy_vector& proxies) {  // NOLINT
+        return pointer(new PuttleProxy(io_service, proxies));
     }
 
-    explicit PuttleProxy(boost::asio::io_service& io_service);  // NOLINT
+    explicit PuttleProxy(boost::asio::io_service& io_service, // NOLINT
+                         proxy_vector proxies);
     ~PuttleProxy();
 
     tcp::socket& socket();
     void start_forwarding();
-    void forward_to(std::string host, std::string port);
-    void set_proxy_user(const std::string& user);
-    void set_proxy_pass(const std::string& pass);
+    void init_forward();
 
 private:
+
+    typedef proxy_vector::iterator proxy_iterator;
 
     void resolve_destination();
     void setup_proxy();
@@ -83,6 +88,9 @@ private:
 
     void shutdown();
     void shutdown_error();
+
+    void log_headers(const Logger::Priority& priority, std::string context, const headers_map& headers);
+
     tcp::socket client_socket_;
     tcp::socket server_socket_;
     tcp::resolver resolver_;
@@ -90,12 +98,11 @@ private:
 
     boost::array<char, BUFFER_SIZE> client_data_;
     boost::array<char, BUFFER_SIZE> server_data_;
-    std::string host_;
-    std::string port_;
+    proxy_vector proxies_;
+    proxy_iterator it_proxy;
+
     std::string dest_host_;
     std::string dest_port_;
-    std::string proxy_user_;
-    std::string proxy_pass_;
     std::string server_headers_;
     headers_map headers_;
     Logger::Log log;
