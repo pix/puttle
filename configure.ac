@@ -4,10 +4,6 @@ AC_CONFIG_HEADERS(config.h)
 AC_PROG_CXX
 AC_PROG_LIBTOOL
 
-AC_CHECK_LIB([boost_regex], [main], [LIBS="$LIBS -lboost_regex"], [AC_MSG_ERROR([Not Found: boost_regex])])
-AC_CHECK_LIB([boost_system], [main], [LIBS="$LIBS -lboost_system"], [AC_MSG_ERROR([Not Found: boost_system])])
-AC_CHECK_LIB([boost_thread], [main], [LIBS="$LIBS -lboost_thread"], [AC_MSG_ERROR([Not Found: boost_thread])])
-AC_CHECK_LIB([boost_program_options], [main], [LIBS="$LIBS -lboost_program_options"], [AC_MSG_ERROR([Not Found: boost_program_options])])
 
 PKG_CHECK_MODULES(LOG4CPP, log4cpp)
 PKG_CHECK_MODULES(OPENSSL, openssl >= 0.9.6)
@@ -29,6 +25,21 @@ AC_ARG_ENABLE(debug,
 			  [enable_debug="no"]
 )
 AC_MSG_RESULT([$debugit])
+
+
+AC_DEFUN([PUTTLE_BOOST_CHECK_LIB],[
+	unset puttle_boost_check
+	for i in "-gcc-mt", "-mt", ""; do
+		AC_CHECK_LIB([$1$i], [main], [LIBS="$LIBS -l$1$i"; break], [])
+	done
+
+	echo $LIBS | grep "$1" >> /dev/null || AC_MSG_ERROR([Not Found: $1])
+])
+
+PUTTLE_BOOST_CHECK_LIB([boost_regex])
+PUTTLE_BOOST_CHECK_LIB([boost_system])
+PUTTLE_BOOST_CHECK_LIB([boost_thread])
+PUTTLE_BOOST_CHECK_LIB([boost_program_options])
 
 AM_CONDITIONAL(HAVE_DEBUG, test "$enable_debug" = yes)
 if test "$enable_debug" = yes; then
