@@ -1,0 +1,25 @@
+#
+# Puttle Configuration File
+#
+
+# Port to listen to (choosed automaticaly by setup-puttle)
+#
+# listen-port = 9090
+
+# Proxy
+#   Sets the remotes proxies we use as relays
+#
+# proxy = user1:user1@oeopkzdpozdk:3128
+# proxy = http://open-relay:8080
+# proxy = another-host.com:8080
+
+# Verbosity
+#   Sets the verbosity level: [EMERG | FATAL | ALERT | CRIT |
+#     ERROR | WARN | NOTICE | INFO | DEBUG]
+#
+# verbosity = ERROR
+
+
+# Number of threads
+#
+# num-threads = 2
