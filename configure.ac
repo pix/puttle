@@ -28,12 +28,19 @@ AC_MSG_RESULT([$debugit])
 
 
 AC_DEFUN([PUTTLE_BOOST_CHECK_LIB],[
-	unset puttle_boost_check
-	for i in "-gcc-mt", "-mt", ""; do
-		AC_CHECK_LIB([$1$i], [main], [LIBS="$LIBS -l$1$i"; break], [])
+	for i in "-gcc-mt" "-mt" ""; do
+		AC_LANG_SAVE
+		AC_LANG_CPLUSPLUS
+		AC_CHECK_LIB([$1$i], [main], [pt_boost_lib="-l$1$i"; break], [])
+		AC_LANG_RESTORE
 	done
 
-	echo $LIBS | grep "$1" >> /dev/null || AC_MSG_ERROR([Not Found: $1])
+	if test -z "${pt_boost_lib}"; then
+		AC_MSG_ERROR([Not Found: $1])
+	else
+		LIBS="$LIBS ${pt_boost_lib}"
+	fi
+
 ])
 
 PUTTLE_BOOST_CHECK_LIB([boost_regex])
