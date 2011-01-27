@@ -182,7 +182,11 @@ void puttle::validate(boost::any& v,                          // NOLINT: overloa
     if (p.is_valid()) {
         v = boost::any(boost::shared_ptr<Proxy>(new Proxy(p)));
     } else {
+#if BOOST_VERSION >= 104200
         throw po::validation_error(po::validation_error::invalid_option_value);
+#else
+        throw po::validation_error("Unable to parse proxy");
+#endif
     }
 }
 
