@@ -37,7 +37,20 @@ class Logger : public Singleton<Logger> {
 public:
     typedef log4cpp::Category& Log;
     typedef log4cpp::CategoryStream Stream;
-    typedef log4cpp::Priority::PriorityLevel Priority;
+
+    enum Priority {
+        EMERG = log4cpp::Priority::EMERG,
+        FATAL = log4cpp::Priority::FATAL,
+        ALERT = log4cpp::Priority::ALERT,
+        CRIT  = log4cpp::Priority::CRIT,
+        ERROR = log4cpp::Priority::ERROR,
+        WARN  = log4cpp::Priority::WARN,
+        NOTICE  = log4cpp::Priority::NOTICE,
+        INFO    = log4cpp::Priority::INFO,
+        DEBUG   = log4cpp::Priority::DEBUG,
+        NOTSET  = log4cpp::Priority::NOTSET,
+    };
+
     static void init();
     static void set_level(const std::string& level);
     static Log get_logger(const std::string& name);

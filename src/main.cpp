@@ -134,7 +134,7 @@ int main(int argc, char** argv) {
 
         Logger::set_level(debug_level);
         Logger::Log log = Logger::get_logger("main");
-        log.setPriority(Logger::Priority::INFO);
+        log.setPriority(Logger::INFO);
 
         log.info("Starting %s v%s", PACKAGE_NAME, PACKAGE_VERSION);
         log.info("Listening on port %d, forwarding to:", port);

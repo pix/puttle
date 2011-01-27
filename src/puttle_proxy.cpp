@@ -151,7 +151,7 @@ void PuttleProxy::setup_proxy() {
     if (authenticator_ != NULL) {
         if (authenticator_->has_error()) {
             log.error("Unable to authenticate the request to: %s:%s", dest_host_.c_str(), dest_port_.c_str());
-            log_headers(Logger::Priority::ERROR, "Headers", authenticator_->get_headers());
+            log_headers(Logger::ERROR, "Headers", authenticator_->get_headers());
             log.errorStream() << "Answer:";
             log.errorStream() << authenticator_->get_token();
             shutdown();
@@ -255,7 +255,7 @@ void PuttleProxy::check_proxy_response() {
         break;
     default:
         log.error("Unknown http status code: %d", http_status);
-        log_headers(Logger::Priority::ERROR, "Proxy error", headers_);
+        log_headers(Logger::ERROR, "Proxy error", headers_);
         shutdown();
         break;
     }
@@ -275,7 +275,7 @@ void PuttleProxy::handle_proxy_auth() {
             authenticator_->set_headers(headers_);
         }
 
-        log_headers(Logger::Priority::DEBUG, "Authentication", headers_);
+        log_headers(Logger::DEBUG, "Authentication", headers_);
 
         server_headers_.clear();
         headers_.clear();
