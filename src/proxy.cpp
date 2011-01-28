@@ -48,15 +48,13 @@ Proxy Proxy::parse(std::string url) {
         p.username = match[2];
         p.password = match[3];
         p.host = match[4];
-        /*
-                try {
-                    if (match[5].matched) {
-                        p.port = boost::lexical_cast<uint16_t>(match[5]);
-                    }
-                } catch(const boost::bad_lexical_cast& e) {
-                    return invalid_proxy;
-                }
-                */
+        try {
+            if (match[5].matched) {
+                p.port = boost::lexical_cast<uint16_t>(match[5]);
+            }
+        } catch(const boost::bad_lexical_cast& e) {
+            return invalid_proxy;
+        }
 
         return p;
     }

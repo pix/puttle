@@ -1,4 +1,4 @@
-AC_INIT([Puttle], [1.0.0], [moncelier@devlife.org])
+AC_INIT([Puttle], [1.0.1], [moncelier@devlife.org])
 AM_INIT_AUTOMAKE([-Wall -Werror foreign])
 AC_CONFIG_HEADERS(config.h)
 AC_PROG_CXX
