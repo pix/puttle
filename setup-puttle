@@ -124,6 +124,10 @@ handle_puttle_start() {
     iptables -t nat -I PREROUTING 1 -j puttle-${PORT}
 }
 
+puttle_mainloop() {
+    wait
+}
+
 launch_puttle() {
     if [ $# -lt 1 ]; then
         echo "Error: No puttle command specified"
@@ -131,12 +135,14 @@ launch_puttle() {
     fi
     PUTTLE="$1"
     shift 1
-    $PUTTLE "$@" --listen-port "${PORT}"
-    return $?
+    $PUTTLE "$@" --listen-port "${PORT}" &
 }
 
 trap_exit() {
+    trap - EXIT TERM QUIT INT HUP
     handle_puttle_exit
+    kill 0
+    sleep 1
     exit 1
 }
 
@@ -150,9 +156,10 @@ check_required iptables-save
 PORT=$(find_port)
 
 # Clean up everything on ^C
-trap trap_exit INT QUIT
+trap trap_exit EXIT TERM QUIT INT HUP
 
 # Let's forward !
 handle_puttle_start
 parse_wrapper_options "$@"
+puttle_mainloop
 handle_puttle_exit
