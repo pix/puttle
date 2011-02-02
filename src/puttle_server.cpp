@@ -30,7 +30,7 @@ namespace puttle {
 
 PuttleServer::PuttleServer(const ios_deque& io_services, int port, const proxy_vector& proxies)
     : io_services_(io_services),
-      acceptor_(*io_services.front(), boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port)),
+      acceptor_(*io_services.front(), boost::asio::ip::tcp::endpoint(boost::asio::ip::address_v4::loopback(), port)),
       proxies_(proxies) {
     boost::asio::socket_base::reuse_address reuse_address(true);
     acceptor_.set_option(reuse_address);
