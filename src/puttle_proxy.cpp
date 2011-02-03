@@ -305,11 +305,9 @@ void PuttleProxy::handle_server_read(const boost::system::error_code& error,
     if (!error) {
         boost::asio::async_write(client_socket_,
                                  boost::asio::buffer(server_data_, bytes_transferred),
-                                 boost::bind(&PuttleProxy::handle_client_write, shared_from_this(),
+                                 boost::bind(&PuttleProxy::handle_server_write, shared_from_this(),
                                              boost::asio::placeholders::error));
 
-        boost::system::error_code ec;
-        handle_server_write(ec);
     } else {
         shutdown();
     }
@@ -320,11 +318,9 @@ void PuttleProxy::handle_client_read(const boost::system::error_code& error,
     if (!error) {
         boost::asio::async_write(server_socket_,
                                  boost::asio::buffer(client_data_, bytes_transferred),
-                                 boost::bind(&PuttleProxy::handle_server_write, shared_from_this(),
+                                 boost::bind(&PuttleProxy::handle_client_write, shared_from_this(),
                                              boost::asio::placeholders::error));
 
-        boost::system::error_code ec;
-        handle_client_write(ec);
     } else {
         shutdown();
     }
