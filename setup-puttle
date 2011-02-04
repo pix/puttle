@@ -80,6 +80,7 @@ parse_include_list() {
 }
 
 parse_wrapper_options() {
+    parse_exclude_list 127.0.0.1/8
     while true; do
         [ -z "$1" ] && break
         case "$1" in
@@ -97,7 +98,6 @@ parse_wrapper_options() {
                 ;;
             "--")
                 shift 1
-                parse_exclude_list 127.0.0.1/8
                 launch_puttle "$@"
                 break
                 ;;
