@@ -95,8 +95,13 @@ void PuttleProxy::handle_resolve(const boost::system::error_code& error,
         try {
             // Opens the socket so we can set the ttl option
             server_socket_.open(boost::asio::ip::tcp::v4());
+
             time_to_live ttl(42);
             server_socket_.set_option(ttl);
+
+            boost::asio::socket_base::keep_alive keep_alive(true);
+            server_socket_.set_option(keep_alive);
+
             server_socket_.async_connect(endpoint,
                                          boost::bind(&PuttleProxy::handle_connect, shared_from_this(),
                                                  boost::asio::placeholders::error, ++endpoint_iterator));
