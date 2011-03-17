@@ -93,6 +93,10 @@ void PuttleProxy::handle_resolve(const boost::system::error_code& error,
         tcp::endpoint endpoint = *endpoint_iterator;
 
         try {
+            // If the socket was previously opened, close it.
+            if (server_socket_.is_open())
+                server_socket_.close();
+
             // Opens the socket so we can set the ttl option
             server_socket_.open(boost::asio::ip::tcp::v4());
 
