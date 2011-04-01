@@ -23,3 +23,4 @@
 
 
 #include "./test-authenticator.h"
+#include "./test-proxy.h"
