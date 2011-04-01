@@ -45,8 +45,8 @@ Proxy Proxy::parse(std::string url) {
     boost::smatch match;
     if (regex_match(url, match, r)) {
         Proxy p;
-        p.username = match[2];
-        p.password = match[3];
+        p.username = url_decode(match[2]);
+        p.password = url_decode(match[3]);
         p.host = match[4];
         try {
             if (match[5].matched) {
@@ -59,6 +59,24 @@ Proxy Proxy::parse(std::string url) {
         return p;
     }
     return invalid_proxy;
+}
+
+std::string Proxy::url_decode(const std::string& uri) {
+    std::string r = "";
+    for (unsigned int i = 0; i < uri.length(); i++) {
+        if (uri[i] == '%' && (i + 2) < uri.length () && isxdigit(uri[i+1]) &&
+                isxdigit(uri[i+2])) {
+            std::string val = uri.substr(i+1, 2);
+            r += static_cast<char>(strtol(val.c_str(), NULL, 16));
+            i += 2;
+        } else if (uri[i] == '+') {
+            r += " ";
+        } else  {
+            r += uri[i];
+        }
+    }
+
+    return r;
 }
 
 bool Proxy::is_valid() {

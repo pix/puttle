@@ -47,6 +47,7 @@ public:
 
     static const Proxy invalid_proxy;
 private:
+    static std::string url_decode(const std::string& uri);
 };
 
 typedef std::vector<boost::shared_ptr<Proxy> > proxy_vector;
