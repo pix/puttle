@@ -31,7 +31,7 @@ AC_DEFUN([PUTTLE_BOOST_CHECK_LIB],[
 	for i in "-gcc-mt" "-mt" ""; do
 		AC_LANG_SAVE
 		AC_LANG_CPLUSPLUS
-		AC_CHECK_LIB([$1$i], [main], [pt_boost_lib="-l$1$i"; break], [])
+		AC_CHECK_LIB([$1$i], [main], [pt_boost_lib="-l$1$i"; break], [pt_boost_lib=""])
 		AC_LANG_RESTORE
 	done
 
