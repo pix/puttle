@@ -1,5 +1,6 @@
 AC_INIT([Puttle], [1.1.3], [moncelier@devlife.org])
-AM_INIT_AUTOMAKE([-Wall -Werror foreign])
+AM_INIT_AUTOMAKE([-Wall -Werror foreign subdir-objects])
+AM_SILENT_RULES([yes])
 AC_CONFIG_HEADERS(config.h)
 AC_PROG_CXX
 AC_PROG_LIBTOOL
@@ -62,13 +63,11 @@ AC_SUBST(AM_CFLAGS)
 AC_SUBST(AM_CXXFLAGS)
 AC_SUBST([LIBS])
 
-SHAVE_INIT([shave/shave], [enable])
 AC_CONFIG_FILES(
 				Makefile
 				src/Makefile
 				tests/Makefile
-				shave/shave/shave
-				shave/shave/shave-libtool)
+				)
 
 
 AC_OUTPUT

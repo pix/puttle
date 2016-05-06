@@ -1,5 +1,3 @@
-ACLOCAL_AMFLAGS = -I shave/shave
-
 SUBDIRS = src tests
 
 if HAVE_DEBUG
