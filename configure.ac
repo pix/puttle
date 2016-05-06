@@ -49,6 +49,9 @@ PUTTLE_BOOST_CHECK_LIB([boost_system])
 PUTTLE_BOOST_CHECK_LIB([boost_thread])
 PUTTLE_BOOST_CHECK_LIB([boost_program_options])
 
+AC_CHECK_HEADERS(pthread.h,, [AC_MSG_ERROR([pthread.h required])])
+AC_CHECK_LIB(pthread, pthread_create, [PTHREAD_LIBS="-lpthread"])
+
 AM_CONDITIONAL(HAVE_DEBUG, test "$enable_debug" = yes)
 if test "$enable_debug" = yes; then
 	AM_CFLAGS="-g -Wall -Werror -Wno-uninitialized -O0"
@@ -57,7 +60,7 @@ if test "$enable_debug" = yes; then
 fi
 
 AM_CXXFLAGS="$AM_CXXFLAGS $OPENSSL_CFLAGS -std=gnu++0x"
-LIBS="$LIBS $OPENSSL_LIBS $LOG4CPP_LIBS"
+LIBS="$LIBS $OPENSSL_LIBS $LOG4CPP_LIBS $PTHREAD_LIBS"
 
 AC_SUBST(AM_CFLAGS)
 AC_SUBST(AM_CXXFLAGS)

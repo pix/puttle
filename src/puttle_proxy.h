@@ -31,6 +31,7 @@
 #include <vector>
 
 #include <boost/ptr_container/ptr_vector.hpp>
+#include <boost/array.hpp>
 
 namespace puttle {
 
